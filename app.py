@@ -191,22 +191,29 @@ elif page == "Parent Review Panel📙":
         logs = [log.strip() for log in logs if log.strip()]
 
         if logs:
-            updated_logs = []
+            if "delete_index" not in st.session_state:
+                st.session_state.delete_index = None
+
             for i, entry in enumerate(logs):
                 if entry:
                     with st.expander(f"🚩 Flag #{i + 1}", expanded=False):
                         lines = entry.strip().split("\n")
                         for line in lines:
                             st.markdown(f"<div style='color:white;'>{line}</div>", unsafe_allow_html=True)
-
                         if st.button(f"🗑️ Delete This Flag", key=f"delete_flag_{i}"):
-                            continue
-                        else:
-                            updated_logs.append(entry)
+                            st.session_state.delete_index = i
+                            st.rerun()
 
-            with open(LOG_FILE, "w", encoding="utf-8") as f:
-                for flag in updated_logs:
-                    f.write(flag + "\n---END-FLAG---\n")
+            # If a delete index was set, remove that entry and rewrite the file
+            if st.session_state.delete_index is not None:
+                index_to_delete = st.session_state.delete_index
+                logs.pop(index_to_delete)
+                with open(LOG_FILE, "w", encoding="utf-8") as f:
+                    for flag in logs:
+                        f.write(flag + "\n---END-FLAG---\n")
+                st.session_state.delete_index = None
+                st.success("Flag deleted.")
+                st.rerun()
 
             if st.button("🧹 Clear All Flags"):
                 open(LOG_FILE, "w", encoding="utf-8").close()
